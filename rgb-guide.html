@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Synthèse additive RGB — Guide</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:#f4f4f4;color:#222;min-height:100vh}
+
+header{background:#006D82;color:#fff;padding:28px 40px 20px}
+header h1{font-size:24px;font-weight:bold;margin-bottom:6px}
+header p{font-size:14px;opacity:.85;max-width:680px;line-height:1.5}
+.badge{display:inline-block;background:#0099A2;color:#fff;font-size:11px;padding:3px 10px;border-radius:12px;margin-top:10px}
+
+.content{max-width:860px;margin:0 auto;padding:28px 24px 48px}
+
+.photo-block{display:flex;gap:24px;align-items:flex-start;margin-bottom:32px;flex-wrap:wrap}
+.photo-block img{width:100%;max-width:420px;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.18);border:3px solid #0099A2}
+.photo-desc{flex:1;min-width:220px}
+.photo-desc h2{font-size:17px;color:#006D82;margin-bottom:10px;font-weight:bold}
+.photo-desc p{font-size:14px;line-height:1.7;color:#444;margin-bottom:10px}
+
+.section{background:#fff;border-radius:10px;border:1px solid #ddd;padding:20px 24px;margin-bottom:20px;box-shadow:0 2px 6px rgba(0,0,0,.06)}
+.section h2{font-size:16px;font-weight:bold;color:#006D82;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.section h2 .num{background:#006D82;color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+
+.steps{list-style:none;display:flex;flex-direction:column;gap:10px}
+.steps li{display:flex;gap:12px;align-items:flex-start;font-size:14px;line-height:1.6;color:#333}
+.steps li .icon{font-size:20px;flex-shrink:0;width:28px;text-align:center}
+
+.warn{background:#fff8e1;border:1px solid #f5c518;border-radius:8px;padding:12px 16px;font-size:13px;color:#7a5c00;display:flex;gap:10px;align-items:flex-start;margin-top:10px}
+.warn .icon{font-size:18px;flex-shrink:0}
+
+.dl-block{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px}
+.btn{display:inline-flex;align-items:center;gap:8px;background:#006D82;color:#fff;text-decoration:none;font-size:14px;font-weight:bold;padding:12px 22px;border-radius:7px;transition:background .2s;border:none;cursor:pointer}
+.btn:hover{background:#0099A2}
+.btn.secondary{background:#575756}
+.btn.secondary:hover{background:#333}
+.btn.big{font-size:16px;padding:14px 28px}
+
+.browser-note{display:flex;align-items:center;gap:10px;background:#e8f5e9;border:1px solid #4caf50;border-radius:8px;padding:12px 16px;font-size:13px;color:#2e7d32;margin-bottom:16px}
+
+footer{text-align:center;font-size:11px;color:#999;padding:20px;border-top:1px solid #ddd}
+footer a{color:#006D82;text-decoration:none}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Synthèse additive des couleurs — Pilotage RGB</h1>
+  <p>Dispositif interactif de démonstration : une matrice de DEL colorées pilotée depuis le navigateur via Bluetooth, pour explorer la synthèse additive en temps réel.</p>
+  <span class="badge">Éric Collard</span>
+</header>
+
+<div class="content">
+
+  <!-- Photo + description -->
+  <div class="photo-block">
+    <img src="photo_dispositif.jpg" alt="Matrice DEL RGB pilotée depuis le navigateur via Bluetooth" onerror="this.style.display='none'">
+    <div class="photo-desc">
+      <h2>Le dispositif</h2>
+      <p>La matrice RGB est composée de 40 DEL bicolores (8 colonnes × 5 lignes), montée sur un shield Arduino UNO R4 WiFi. Chaque DEL peut afficher n'importe quelle couleur par mélange additif des composantes Rouge, Vert et Bleu.</p>
+      <p>L'interface web permet de dessiner pixel par pixel, de remplir la matrice, d'appliquer des préréglages optiques, et d'envoyer les trames en temps réel via <strong>Bluetooth Low Energy</strong>.</p>
+      <p>Aucune installation de logiciel n'est nécessaire côté PC — tout fonctionne dans <strong>Google Chrome</strong>.</p>
+    </div>
+  </div>
+
+  <!-- Prérequis -->
+  <div class="section">
+    <h2><span class="num">1</span>Prérequis avant de commencer</h2>
+    <div class="browser-note">
+      <span>✅</span>
+      <span>Cette application utilise <strong>Web Bluetooth</strong>, disponible uniquement dans <strong>Google Chrome</strong> (version 70+) sur Mac, Windows ou Linux. Elle ne fonctionne pas dans Safari, Firefox ou les navigateurs mobiles standard.</span>
+    </div>
+    <ul class="steps">
+      <li><span class="icon">💻</span>Ouvrir cette page dans <strong>Google Chrome</strong></li>
+      <li><span class="icon">📡</span>Vérifier que le <strong>Bluetooth</strong> de votre ordinateur est activé</li>
+      <li><span class="icon">🔌</span>Brancher l'Arduino sur une alimentation USB (ordinateur ou chargeur)</li>
+      <li><span class="icon">⏱️</span>Attendre quelques secondes que le module BLE démarre et commence à diffuser</li>
+    </ul>
+  </div>
+
+  <!-- Connexion -->
+  <div class="section">
+    <h2><span class="num">2</span>Se connecter au dispositif</h2>
+    <ul class="steps">
+      <li><span class="icon">1️⃣</span>Cliquer sur le bouton <strong>"Lancer l'application"</strong> ci-dessous — l'interface s'ouvre dans un nouvel onglet Chrome</li>
+      <li><span class="icon">2️⃣</span>Dans l'interface, cliquer sur le bouton <strong>"Connecter"</strong> en haut à droite</li>
+      <li><span class="icon">3️⃣</span>Une fenêtre de sélection Bluetooth s'ouvre — choisir <strong>"ARD-RGBShield"</strong> dans la liste</li>
+      <li><span class="icon">4️⃣</span>Cliquer sur <strong>"Associer"</strong> — le point rouge passe au vert et le statut affiche "Connecté"</li>
+      <li><span class="icon">5️⃣</span>La matrice est maintenant synchronisée en temps réel avec l'interface</li>
+    </ul>
+    <div class="warn">
+      <span class="icon">⚠️</span>
+      <span>Si le module n'apparaît pas dans la liste Bluetooth, vérifiez que l'Arduino est bien alimenté, que le Bluetooth de l'ordinateur est actif, et que vous êtes dans Chrome. Rechargez la page et réessayez.</span>
+    </div>
+  </div>
+
+  <!-- Utilisation -->
+  <div class="section">
+    <h2><span class="num">3</span>Utiliser l'interface</h2>
+    <ul class="steps">
+      <li><span class="icon">🎨</span><span><strong>Sélecteur de couleur</strong> : choisissez la couleur avec le picker ou les nuanciers rapides (rouge, vert, bleu, blanc, cyan, magenta, jaune)</span></li>
+      <li><span class="icon">🖌️</span><span><strong>Pinceau</strong> : cliquez ou glissez sur la grille pour colorier les DEL pixel par pixel</span></li>
+      <li><span class="icon">💡</span><span><strong>Démonstrations optique</strong> : remplissage instantané en rouge, vert, bleu, blanc, ou bandes R/V/B — idéal pour illustrer la synthèse additive</span></li>
+      <li><span class="icon">💾</span><span><strong>Figures enregistrées</strong> : sauvegardez vos compositions pour les rappeler en un clic pendant la séance</span></li>
+      <li><span class="icon">🔆</span><span><strong>Luminosité</strong> : ajustez l'intensité globale des DEL (valeur basse recommandée pour le confort visuel)</span></li>
+    </ul>
+  </div>
+
+  <!-- Installer Arduino -->
+  <div class="section">
+    <h2><span class="num">4</span>Installer le code Arduino (formateurs)</h2>
+    <ul class="steps" style="margin-bottom:16px">
+      <li><span class="icon">📥</span>Télécharger l'archive ci-dessous — elle contient le sketch Arduino et les instructions d'installation</li>
+      <li><span class="icon">🛠️</span>Ouvrir le fichier <code>.ino</code> dans l'<strong>IDE Arduino</strong> (version 2.x recommandée)</li>
+      <li><span class="icon">📚</span>Installer les bibliothèques requises : <strong>ArduinoBLE</strong> et <strong>Adafruit NeoPixel</strong> via le gestionnaire de bibliothèques</li>
+      <li><span class="icon">🔌</span>Sélectionner la carte <strong>Arduino UNO R4 WiFi</strong>, brancher via USB, téléverser</li>
+      <li><span class="icon">✅</span>Le module commence à diffuser en BLE sous le nom <strong>"ARD-RGBShield"</strong></li>
+    </ul>
+    <div class="dl-block">
+      <a class="btn secondary" href="MATRICE_RGB_RECEPTEUR.ino" download>
+        ⬇ Télécharger le sketch Arduino (.ino)
+      </a>
+    </div>
+  </div>
+
+  <!-- Bouton principal -->
+  <div style="text-align:center;margin-top:32px">
+    <a class="btn big" href="RGB_PILOTE.html" target="_blank">
+      🚀 Lancer l'application RGB
+    </a>
+    <p style="font-size:12px;color:#888;margin-top:10px">S'ouvre dans un nouvel onglet Chrome — connexion Bluetooth requise</p>
+  </div>
+
+</div>
+
+<footer>
+  Éric Collard — Ressources pédagogiques libres — <a href="https://www.uca.fr" target="_blank">Université Clermont Auvergne</a>
+</footer>
+
+</body>
+</html>
