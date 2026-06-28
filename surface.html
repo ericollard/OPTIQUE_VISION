@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:#f0f0f0;padding:12px;user-select:none}
+.layout{display:grid;grid-template-columns:110px 1fr 160px;gap:10px;align-items:start}
+.source-row{display:flex;align-items:center;gap:6px;cursor:pointer;padding:2px 4px;border-radius:4px}
+.source-row:hover{background:#e0e0e0}
+.source-dot{width:26px;height:26px;border-radius:50%;border:1.5px solid #888;flex-shrink:0}
+.radio{width:16px;height:16px;border-radius:50%;border:2px solid #888;background:#fff;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.radio.selected::after{content:'';width:8px;height:8px;border-radius:50%;background:#333;display:block}
+.off-dot{width:26px;height:26px;border-radius:50%;background:#111;border:1.5px solid #555;display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:bold}
+.sml-table{display:flex;gap:0;border:2px solid #222;width:fit-content;flex-shrink:0}
+.sml-cell{width:34px;height:28px;border:1.5px solid #222;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;color:#222;background:#fff;position:relative;flex:0 0 34px}
+.sml-cell.absent::before,.sml-cell.absent::after{content:'';position:absolute;background:#222;border-radius:1px}
+.sml-cell.absent::before{width:2px;height:141%;top:-20%;left:50%;transform:translateX(-50%) rotate(45deg)}
+.sml-cell.absent::after{width:2px;height:141%;top:-20%;left:50%;transform:translateX(-50%) rotate(-45deg)}
+.cone-circle{width:32px;height:32px;border-radius:50%;border:2.5px solid #222;background:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;color:#222;position:relative;flex-shrink:0}
+.cone-circle.absorbed::before,.cone-circle.absorbed::after{content:'';position:absolute;background:#222;border-radius:1px}
+.cone-circle.absorbed::before{width:2.5px;height:80%;top:10%;left:50%;transform:translateX(-50%) rotate(45deg)}
+.cone-circle.absorbed::after{width:2.5px;height:80%;top:10%;left:50%;transform:translateX(-50%) rotate(-45deg)}
+.surf-col{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer}
+.surf-dot{width:32px;height:32px;border-radius:50%;border:1.5px solid #888}
+.surf-radio{width:16px;height:16px;border-radius:50%;border:2px solid #888;background:#fff;display:flex;align-items:center;justify-content:center}
+.surf-radio.selected::after{content:'';width:8px;height:8px;border-radius:50%;background:#333;display:block}
+
+</style>
+</head>
+<body>
+<h1 style="text-align:center;color:#00c;font-size:18px;font-weight:bold;margin-bottom:14px;letter-spacing:.5px">DIFFUSION DE LA LUMIÈRE SUR UNE SURFACE "COLORÉE"</h1>
+
+<div class="layout">
+  <div>
+    <div style="font-weight:bold;font-size:14px;margin-bottom:2px">Sources</div>
+    <div style="font-size:11px;color:#555;margin-bottom:6px">(Couleur perçue)</div>
+    <div id="sources-list"></div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:0 4px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;width:100%;max-width:780px">
+      <div>
+        <div style="font-size:10px;color:#555;text-align:center;margin-bottom:2px">Spectre de la lumière émise par la source</div>
+        <div class="sml-table" id="sml-source"></div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:#555;text-align:center;margin-bottom:2px">Spectre de la lumière entrant dans l'œil</div>
+        <div class="sml-table" id="sml-oeil"></div>
+      </div>
+    </div>
+
+    <div id="canvas-wrap" style="width:100%">
+      <canvas id="schema" width="1200" height="780" style="width:100%;height:auto;display:block"></canvas>
+    </div>
+
+    <div style="display:flex;gap:14px;margin-top:4px" id="cones-row"></div>
+    <div style="font-size:11px;color:#444;text-align:center;font-style:italic;margin-top:4px;min-height:32px;max-width:600px" id="surface-desc"></div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+    <div style="font-size:14px;font-weight:bold;text-align:center">CERVEAU</div>
+    <div id="cerveau-box" style="width:120px;height:100px;border:2px solid #333;background:#000"></div>
+    <div style="font-size:13px;font-weight:bold;text-align:center">Sensations</div>
+    <div style="font-size:11px;color:#555;text-align:center">(Couleur perçue)</div>
+  </div>
+</div>
+
+<div style="margin-top:10px;display:flex;gap:12px;align-items:flex-start">
+  <div>
+    <div style="font-weight:bold;font-size:14px">Surfaces</div>
+    <div style="font-size:11px;color:#555">(Couleurs perçues<br>en lumière blanche)</div>
+  </div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap" id="surfaces-list"></div>
+</div>
+
+<script>
+const SOURCES=[
+  {label:'Bleu',   color:'#0000ff',sml:[1,0,0]},
+  {label:'Rouge',  color:'#ff0000',sml:[0,0,1]},
+  {label:'Vert',   color:'#00cc00',sml:[0,1,0]},
+  {label:'Jaune',  color:'#ffff00',sml:[0,1,1]},
+  {label:'Cyan',   color:'#00ffff',sml:[1,1,0]},
+  {label:'Magenta',color:'#ff00ff',sml:[1,0,1]},
+  {label:'Blanc',  color:'#ffffff',sml:[1,1,1]},
+  {label:'OFF',    color:null,     sml:[0,0,0]},
+];
+const SURFACES=[
+  {label:'Noir',   color:'#111111',refl:[0,0,0],desc:"La surface absorbe toutes les radiations du spectre visible"},
+  {label:'Blanc',  color:'#ffffff',refl:[1,1,1],desc:"La surface diffuse toutes les radiations du spectre visible (S,M,L)"},
+  {label:'Magenta',color:'#ff00ff',refl:[1,0,1],desc:"La surface absorbe les radiations de moyenne longueur d'onde (Medium wave)"},
+  {label:'Cyan',   color:'#00ffff',refl:[1,1,0],desc:"La surface absorbe les radiations de grande longueur d'onde (Long wave)"},
+  {label:'Jaune',  color:'#ffff00',refl:[0,1,1],desc:"La surface absorbe les radiations de courte longueur d'onde (Short wave)"},
+  {label:'Vert',   color:'#00cc00',refl:[0,1,0],desc:"La surface absorbe les radiations de courte et de grande longueur d'onde (S et L)"},
+  {label:'Rouge',  color:'#ff0000',refl:[0,0,1],desc:"La surface absorbe les radiations S et M (courte et moyenne longueur d'onde)"},
+  {label:'Bleu',   color:'#0000ff',refl:[1,0,0],desc:"La surface absorbe les radiations M et L (moyenne et grande longueur d'onde)"},
+];
+let selSource=6, selSurf=1;
+
+// Dimensions internes fixes du canvas (espace de dessin)
+const CW=1200, CH=780;
+
+
+function buildSources(){
+  const el=document.getElementById('sources-list');el.innerHTML='';
+  SOURCES.forEach((s,i)=>{
+    const row=document.createElement('div');row.className='source-row';
+    row.onclick=()=>{selSource=i;render();};
+    if(!s.color) row.innerHTML=`<div class="off-dot">OFF</div><div class="radio${i===selSource?' selected':''}"></div>`;
+    else row.innerHTML=`<div class="source-dot" style="background:${s.color};${s.color==='#ffffff'?'border:1.5px solid #aaa':''}"></div><div class="radio${i===selSource?' selected':''}"></div>`;
+    el.appendChild(row);
+  });
+}
+
+function buildSurfaces(){
+  const el=document.getElementById('surfaces-list');el.innerHTML='';
+  SURFACES.forEach((s,i)=>{
+    const col=document.createElement('div');col.className='surf-col';
+    col.onclick=()=>{selSurf=i;render();};
+    col.innerHTML=`<div class="surf-dot" style="background:${s.color};${s.color==='#ffffff'?'border:1.5px solid #aaa':''}"></div><div class="surf-radio${i===selSurf?' selected':''}"></div>`;
+    el.appendChild(col);
+  });
+}
+
+function renderSML(id,sml){
+  const el=document.getElementById(id),labels=['S','M','L'];el.innerHTML='';
+  sml.forEach((v,i)=>{
+    const c=document.createElement('div');
+    c.className='sml-cell'+(v===0?' absent':'');
+    c.textContent=labels[i];
+    el.appendChild(c);
+  });
+}
+
+function renderCones(refl){
+  const el=document.getElementById('cones-row'),labels=['S','M','L'];el.innerHTML='';
+  refl.forEach((v,i)=>{
+    const c=document.createElement('div');
+    c.className='cone-circle'+(v===0?' absorbed':'');
+    c.textContent=labels[i];
+    el.appendChild(c);
+  });
+}
+
+function smlToRGB(sml){return `rgb(${sml[2]*255},${sml[1]*255},${sml[0]*255})`;}
+
+function drawArrow(ctx,fromX,fromY,toX,toY){
+  const a=Math.atan2(toY-fromY,toX-fromX),s=11;
+  ctx.beginPath();
+  ctx.moveTo(toX,toY);
+  ctx.lineTo(toX-s*Math.cos(a-.4),toY-s*Math.sin(a-.4));
+  ctx.lineTo(toX-s*Math.cos(a+.4),toY-s*Math.sin(a+.4));
+  ctx.closePath();ctx.fillStyle='#222';ctx.fill();
+}
+
+function drawLabel(ctx,label,fromX,fromY,toX,toY,t){
+  const dx=toX-fromX,dy=toY-fromY,len=Math.sqrt(dx*dx+dy*dy);
+  const ux=dx/len,uy=dy/len;
+  let px=-uy,py=ux;
+  if(py>0){px=-px;py=-py;}
+  const mx=fromX+dx*t,my=fromY+dy*t;
+  const off=28;
+  ctx.save();
+  const angle=Math.atan2(dy,dx);
+  ctx.translate(mx+px*off,my+py*off);
+  let rot=angle;
+  if(rot>Math.PI/2||rot<-Math.PI/2) rot+=Math.PI;
+  ctx.rotate(rot);
+  ctx.fillStyle='#222';
+  ctx.font='bold 22px Arial';
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  ctx.fillText(label,0,0);
+  ctx.restore();
+}
+
+function drawEye(ctx,x,y,fromX,fromY){
+  const rayAngle=Math.atan2(y-fromY,x-fromX);
+  const tipX=80,tipY=0,topX=-40,topY=-65,botX=-40,botY=65,arcCx=-70;
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.rotate(rayAngle);
+  ctx.strokeStyle='#333';ctx.lineWidth=6;ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.beginPath();
+  ctx.moveTo(tipX,tipY);ctx.lineTo(topX,topY);
+  const r=Math.sqrt((topX-arcCx)**2+topY**2);
+  ctx.arc(arcCx,0,r,Math.atan2(topY,topX-arcCx),Math.atan2(botY,botX-arcCx),false);
+  ctx.lineTo(tipX,tipY);ctx.closePath();
+  ctx.fillStyle='#fff';ctx.fill();ctx.stroke();
+  ctx.fillStyle='rgba(90,90,90,0.5)';
+  ctx.beginPath();ctx.ellipse(-10,0,28,52,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#111';
+  ctx.beginPath();ctx.ellipse(-10,0,16,40,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.8)';
+  ctx.beginPath();ctx.ellipse(-2,-16,5,9,-.3,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(4,-8,3,5,-.3,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+}
+
+function drawSchema(smlSrc,refl){
+  const canvas=document.getElementById('schema');
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,CW,CH);
+
+  const surfY=660, cx=500, cy=surfY;
+
+  const result=smlSrc.map((v,i)=>v*refl[i]);
+  const active=[],reflActive=[];
+  if(smlSrc[0])active.push('S');if(smlSrc[1])active.push('M');if(smlSrc[2])active.push('L');
+  if(result[0])reflActive.push('S');if(result[1])reflActive.push('M');if(result[2])reflActive.push('L');
+  const lbl=active.length?active.join(','):'(aucune)';
+  const rbl=reflActive.join(',');
+
+  // Surface
+  ctx.strokeStyle='#111';ctx.lineWidth=8;
+  ctx.beginPath();ctx.moveTo(20,surfY);ctx.lineTo(CW-20,surfY);ctx.stroke();
+
+  // Normale pointillée
+  ctx.setLineDash([12,8]);ctx.strokeStyle='#666';ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(cx,surfY-580);ctx.lineTo(cx,surfY+60);ctx.stroke();
+  ctx.setLineDash([]);ctx.strokeStyle='#222';
+
+  // Rayon incident à 135°
+  const incRad=135*Math.PI/180;
+  const incLen=620;
+  const incX=cx+incLen*Math.cos(incRad);
+  const incY=cy-incLen*Math.sin(incRad);
+
+  ctx.lineWidth=7;
+  ctx.beginPath();ctx.moveTo(incX,incY);ctx.lineTo(cx,cy);ctx.stroke();
+  drawArrow(ctx,incX,incY,cx,cy);
+  const midIncX=(incX+cx)/2,midIncY=(incY+cy)/2;
+  const incAngFwd=Math.atan2(cy-incY,cx-incX);
+  const sm=28;
+  ctx.beginPath();
+  ctx.moveTo(midIncX,midIncY);
+  ctx.lineTo(midIncX-sm*Math.cos(incAngFwd-.4),midIncY-sm*Math.sin(incAngFwd-.4));
+  ctx.lineTo(midIncX-sm*Math.cos(incAngFwd+.4),midIncY-sm*Math.sin(incAngFwd+.4));
+  ctx.closePath();ctx.fillStyle='#222';ctx.fill();
+  drawLabel(ctx,lbl,incX,incY,cx,cy,0.5);
+  ctx.lineWidth=3.5;
+
+  // Rayons diffusés
+  const rayLen=480;
+  const angles=[30,60,90,120,150,180];
+  const eyeAngle=30*Math.PI/180;
+  const eyeDist=340;
+  const eyeX=cx+eyeDist*Math.cos(eyeAngle);
+  const eyeY=cy-eyeDist*Math.sin(eyeAngle);
+  const pupX=eyeX-25,pupY=eyeY;
+
+  if(reflActive.length>0){
+    angles.forEach(deg=>{
+      const rad=deg*Math.PI/180;
+      let tx,ty;
+      if(deg===30){tx=pupX;ty=pupY;}
+      else{tx=cx+rayLen*Math.cos(rad);ty=cy-rayLen*Math.sin(rad);}
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(tx,ty);ctx.stroke();
+      drawArrow(ctx,cx,cy,tx,ty);
+      if(deg===30){
+        const mx2=(cx+tx)/2,my2=(cy+ty)/2;
+        const a2=Math.atan2(ty-cy,tx-cx);
+        ctx.beginPath();
+        ctx.moveTo(mx2,my2);
+        ctx.lineTo(mx2-sm*Math.cos(a2-.4),my2-sm*Math.sin(a2-.4));
+        ctx.lineTo(mx2-sm*Math.cos(a2+.4),my2-sm*Math.sin(a2+.4));
+        ctx.closePath();ctx.fillStyle='#222';ctx.fill();
+      }
+      if(deg!==0&&deg!==180) drawLabel(ctx,rbl,cx,cy,tx,ty,0.5);
+    });
+    drawEye(ctx,eyeX,eyeY,cx,cy);
+  } else {
+    drawEye(ctx,eyeX,eyeY,cx,cy);
+  }
+}
+
+function render(){
+  const src=SOURCES[selSource],surf=SURFACES[selSurf];
+  const result=src.sml.map((v,i)=>v*surf.refl[i]);
+  buildSources();buildSurfaces();
+  renderSML('sml-source',src.sml);
+  renderSML('sml-oeil',result);
+  renderCones(surf.refl);
+  drawSchema(src.sml,surf.refl);
+  document.getElementById('surface-desc').textContent=surf.desc;
+  document.getElementById('cerveau-box').style.background=smlToRGB(result);
+
+}
+
+render();
+</script>
+</body>
+</html>
