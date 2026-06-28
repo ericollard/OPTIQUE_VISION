@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:#f0f0f0;padding:12px;user-select:none}
+.main-layout{display:grid;grid-template-columns:110px 1fr 160px;gap:10px;align-items:start}
+.source-row{display:flex;align-items:center;gap:6px;cursor:pointer;padding:2px 4px;border-radius:4px}
+.source-row:hover{background:#e0e0e0}
+.source-dot{width:26px;height:26px;border-radius:50%;border:1.5px solid #888;flex-shrink:0}
+.radio{width:16px;height:16px;border-radius:50%;border:2px solid #888;background:#fff;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.radio.selected::after{content:'';width:8px;height:8px;border-radius:50%;background:#333;display:block}
+.off-dot{width:26px;height:26px;border-radius:50%;background:#111;border:1.5px solid #555;display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:bold}
+.sml-table{display:flex;gap:0;border:2px solid #222;width:fit-content}
+.sml-cell{width:34px;height:28px;border:1.5px solid #222;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;color:#222;background:#fff;position:relative;flex:0 0 34px}
+.sml-cell.absent::before,.sml-cell.absent::after{content:'';position:absolute;background:#222;border-radius:1px}
+.sml-cell.absent::before{width:2px;height:141%;top:-20%;left:50%;transform:translateX(-50%) rotate(45deg)}
+.sml-cell.absent::after{width:2px;height:141%;top:-20%;left:50%;transform:translateX(-50%) rotate(-45deg)}
+.cone-circle{width:34px;height:34px;border-radius:50%;border:2.5px solid #222;background:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;color:#222;position:relative;flex-shrink:0}
+.cone-circle.absorbed::before,.cone-circle.absorbed::after{content:'';position:absolute;background:#222;border-radius:1px}
+.cone-circle.absorbed::before{width:2.5px;height:80%;top:10%;left:50%;transform:translateX(-50%) rotate(45deg)}
+.cone-circle.absorbed::after{width:2.5px;height:80%;top:10%;left:50%;transform:translateX(-50%) rotate(-45deg)}
+.filter-col{display:flex;flex-direction:column;align-items:center;gap:4px}
+.filter-col .title{font-size:12px;font-weight:bold;text-align:center}
+.filt-row{display:flex;align-items:center;gap:5px;cursor:pointer;padding:2px 4px;border-radius:4px}
+.filt-row:hover{background:#e0e0e0}
+.filt-dot{width:22px;height:22px;border-radius:4px;border:1.5px solid #888;flex-shrink:0}
+.filt-radio{width:14px;height:14px;border-radius:50%;border:2px solid #888;background:#fff;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.filt-radio.selected::after{content:'';width:7px;height:7px;border-radius:50%;background:#333;display:block}
+.filters-area{display:flex;gap:60px;justify-content:center;margin-top:12px}
+.sml-group{display:flex;flex-direction:column;align-items:center;gap:2px}
+.sml-label{font-size:10px;color:#555;text-align:center}
+.desc-text{font-size:11px;color:#444;text-align:center;font-style:italic;min-height:28px;max-width:260px}
+/* Wrapper cônes positionné sous le canvas */
+#cones-zone{position:relative;width:100%;height:70px;margin-top:2px}
+.cone-group{position:absolute;display:flex;flex-direction:column;align-items:center;gap:4px;transform:translateX(-50%)}
+.cone-group-label{font-size:10px;color:#555;font-weight:bold;text-align:center;white-space:nowrap}
+.cone-row{display:flex;gap:10px}
+</style>
+</head>
+<body>
+<h1 style="text-align:center;color:#00c;font-size:18px;font-weight:bold;margin-bottom:14px;letter-spacing:.5px">TRANSMISSION DE LA LUMIÈRE À TRAVERS UN FILTRE "COLORÉ"</h1>
+
+<div class="main-layout">
+  <!-- SOURCES -->
+  <div>
+    <div style="font-weight:bold;font-size:14px;margin-bottom:2px">Sources</div>
+    <div style="font-size:11px;color:#555;margin-bottom:6px">(Couleur perçue)</div>
+    <div id="sources-list"></div>
+  </div>
+
+  <!-- CENTRE -->
+  <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+
+    <!-- Tableaux SML haut -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;width:100%;flex-wrap:wrap;gap:6px">
+      <div class="sml-group">
+        <div class="sml-label">Spectre source</div>
+        <div class="sml-table" id="sml-source"></div>
+      </div>
+      <div class="sml-group">
+        <div class="sml-label">Après Filtre 1</div>
+        <div class="sml-table" id="sml-f1"></div>
+      </div>
+      <div class="sml-group">
+        <div class="sml-label">Entrant dans l'œil</div>
+        <div class="sml-table" id="sml-oeil"></div>
+      </div>
+    </div>
+
+    <!-- Canvas schéma -->
+    <canvas id="schema" width="980" height="300" style="width:100%;display:block"></canvas>
+
+    <!-- Zone cônes HTML positionnés sous F1 et F2 -->
+    <div id="cones-zone">
+      <div class="cone-group" id="cones-f1-group">
+        <div class="cone-group-label">Effet de F1</div>
+        <div class="cone-row" id="cones-f1"></div>
+      </div>
+      <div class="cone-group" id="cones-f2-group">
+        <div class="cone-group-label">Effet de F2</div>
+        <div class="cone-row" id="cones-f2"></div>
+      </div>
+    </div>
+
+    <!-- Descriptions filtres -->
+    <div style="display:flex;gap:20px;justify-content:space-between;width:100%;margin-top:2px">
+      <div class="desc-text" id="desc-f1"></div>
+      <div class="desc-text" id="desc-f2"></div>
+    </div>
+  </div>
+
+  <!-- CERVEAU -->
+  <div style="display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:60px">
+    <div style="font-size:14px;font-weight:bold;text-align:center">CERVEAU</div>
+    <div id="cerveau-box" style="width:120px;height:100px;border:2px solid #333;background:#000"></div>
+    <div style="font-size:13px;font-weight:bold;text-align:center">Sensation</div>
+    <div style="font-size:11px;color:#555;text-align:center">(Couleur perçue)</div>
+  </div>
+</div>
+
+<!-- FILTRES -->
+<div class="filters-area">
+  <div class="filter-col">
+    <div class="title">Filtre 1</div>
+    <div id="filts-1"></div>
+  </div>
+  <div class="filter-col">
+    <div class="title">Filtre 2</div>
+    <div id="filts-2"></div>
+  </div>
+</div>
+
+<script>
+const SOURCES=[
+  {label:'Bleu',   color:'#0000ff',sml:[1,0,0]},
+  {label:'Rouge',  color:'#ff0000',sml:[0,0,1]},
+  {label:'Vert',   color:'#00cc00',sml:[0,1,0]},
+  {label:'Jaune',  color:'#ffff00',sml:[0,1,1]},
+  {label:'Cyan',   color:'#00ffff',sml:[1,1,0]},
+  {label:'Magenta',color:'#ff00ff',sml:[1,0,1]},
+  {label:'Blanc',  color:'#ffffff',sml:[1,1,1]},
+  {label:'OFF',    color:null,     sml:[0,0,0]},
+];
+const FILTERS=[
+  {label:'Transparent',color:'#ffffff',trans:[1,1,1],desc:"Transmet toutes les radiations S, M, L (sans absorption)"},
+  {label:'Magenta',color:'#ff00ff',trans:[1,0,1],desc:"Absorbe les radiations M (moyenne longueur d'onde)"},
+  {label:'Cyan',   color:'#00ffff',trans:[1,1,0],desc:"Absorbe les radiations L (grande longueur d'onde)"},
+  {label:'Jaune',  color:'#ffff00',trans:[0,1,1],desc:"Absorbe les radiations S (courte longueur d'onde)"},
+  {label:'Vert',   color:'#00cc00',trans:[0,1,0],desc:"Absorbe les radiations S et L"},
+  {label:'Rouge',  color:'#ff0000',trans:[0,0,1],desc:"Absorbe les radiations S et M"},
+  {label:'Bleu',   color:'#0000ff',trans:[1,0,0],desc:"Absorbe les radiations M et L"},
+];
+
+let selSource=6, selF1=0, selF2=0;
+
+function smlLabel(sml){
+  const lb=['S','M','L'],a=[];
+  sml.forEach((v,i)=>{if(v)a.push(lb[i]);});
+  return a.length?a.join(','):'∅';
+}
+function smlToRGB(sml){return `rgb(${sml[2]*255},${sml[1]*255},${sml[0]*255})`;}
+
+function buildSources(){
+  const el=document.getElementById('sources-list');el.innerHTML='';
+  SOURCES.forEach((s,i)=>{
+    const row=document.createElement('div');row.className='source-row';
+    row.onclick=()=>{selSource=i;render();};
+    if(!s.color) row.innerHTML=`<div class="off-dot">OFF</div><div class="radio${i===selSource?' selected':''}"></div>`;
+    else row.innerHTML=`<div class="source-dot" style="background:${s.color};${s.color==='#ffffff'?'border:1.5px solid #aaa':''}"></div><div class="radio${i===selSource?' selected':''}"></div>`;
+    el.appendChild(row);
+  });
+}
+
+function buildFilters(id,sel,setter){
+  const el=document.getElementById(id);el.innerHTML='';
+  FILTERS.forEach((f,i)=>{
+    const row=document.createElement('div');row.className='filt-row';
+    row.onclick=()=>{setter(i);render();};
+    const bc=f.color==='#ffffff'?'border:1.5px solid #aaa':'';
+    row.innerHTML=`<div class="filt-dot" style="background:${f.color};${bc}"></div><span style="font-size:12px;min-width:64px">${f.label}</span><div class="filt-radio${i===sel?' selected':''}"></div>`;
+    el.appendChild(row);
+  });
+}
+
+function renderSML(id,sml){
+  const el=document.getElementById(id),labels=['S','M','L'];el.innerHTML='';
+  sml.forEach((v,i)=>{
+    const c=document.createElement('div');
+    c.className='sml-cell'+(v===0?' absent':'');
+    c.textContent=labels[i];
+    el.appendChild(c);
+  });
+}
+
+function renderCones(elId,sml){
+  const el=document.getElementById(elId),labels=['S','M','L'];el.innerHTML='';
+  sml.forEach((v,i)=>{
+    const c=document.createElement('div');
+    c.className='cone-circle'+(v===0?' absorbed':'');
+    c.textContent=labels[i];
+    el.appendChild(c);
+  });
+}
+
+/* ---- CANVAS ---- */
+function drawArrow(ctx,x1,y1,x2,y2){
+  const a=Math.atan2(y2-y1,x2-x1),s=10;
+  ctx.beginPath();ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-s*Math.cos(a-.4),y2-s*Math.sin(a-.4));
+  ctx.lineTo(x2-s*Math.cos(a+.4),y2-s*Math.sin(a+.4));
+  ctx.closePath();ctx.fillStyle='#222';ctx.fill();
+}
+function midArrow(ctx,x1,y1,x2,y2){
+  const mx=(x1+x2)/2,my=(y1+y2)/2;
+  const a=Math.atan2(y2-y1,x2-x1),s=14;
+  ctx.beginPath();ctx.moveTo(mx,my);
+  ctx.lineTo(mx-s*Math.cos(a-.4),my-s*Math.sin(a-.4));
+  ctx.lineTo(mx-s*Math.cos(a+.4),my-s*Math.sin(a+.4));
+  ctx.closePath();ctx.fillStyle='#222';ctx.fill();
+}
+function drawEye(ctx,cx,cy){
+  const tipX=cx+55,tipY=cy,topX=cx-30,topY=cy-45,botX=cx-30,botY=cy+45,arcCx=cx-55;
+  ctx.save();
+  ctx.strokeStyle='#333';ctx.lineWidth=4;ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.beginPath();ctx.moveTo(tipX,tipY);ctx.lineTo(topX,topY);
+  const r=Math.sqrt((topX-arcCx)**2+(topY-cy)**2);
+  ctx.arc(arcCx,cy,r,Math.atan2(topY-cy,topX-arcCx),Math.atan2(botY-cy,botX-arcCx),false);
+  ctx.lineTo(tipX,tipY);ctx.closePath();
+  ctx.fillStyle='#fff';ctx.fill();ctx.stroke();
+  ctx.fillStyle='rgba(90,90,90,0.5)';ctx.beginPath();ctx.ellipse(cx-8,cy,20,37,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#111';ctx.beginPath();ctx.ellipse(cx-8,cy,11,28,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.8)';ctx.beginPath();ctx.ellipse(cx-2,cy-10,4,7,-.3,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+}
+function drawSource(ctx,x,y,color){
+  ctx.save();
+  ctx.beginPath();ctx.arc(x,y,22,0,Math.PI*2);
+  ctx.fillStyle=color||'#111';ctx.fill();
+  ctx.strokeStyle='#444';ctx.lineWidth=2.5;ctx.stroke();
+  ctx.strokeStyle='#444';ctx.lineWidth=1.5;
+  for(let a=0;a<Math.PI*2;a+=Math.PI/4){
+    ctx.beginPath();ctx.moveTo(x+24*Math.cos(a),y+24*Math.sin(a));ctx.lineTo(x+34*Math.cos(a),y+34*Math.sin(a));ctx.stroke();
+  }
+  ctx.restore();
+}
+function drawFilter(ctx,x,yc,color,label,h){
+  const w=32,hh=h||120,isTransp=color==='#ffffff';
+  ctx.save();
+  if(isTransp){
+    ctx.strokeStyle='#888';ctx.lineWidth=2;ctx.setLineDash([6,4]);
+    ctx.beginPath();ctx.rect(x-w/2,yc-hh/2,w,hh);ctx.stroke();
+    ctx.setLineDash([]);
+  } else {
+    ctx.fillStyle=color;ctx.strokeStyle='#222';ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.rect(x-w/2,yc-hh/2,w,hh);ctx.fill();ctx.stroke();
+    ctx.strokeStyle='rgba(0,0,0,0.18)';ctx.lineWidth=1;
+    for(let yy=yc-hh/2+8;yy<yc+hh/2;yy+=12){
+      ctx.beginPath();ctx.moveTo(x-w/2,yy);ctx.lineTo(x+w/2,yy-8);ctx.stroke();
+    }
+  }
+  ctx.fillStyle='#222';ctx.font='bold 14px Arial';ctx.textAlign='center';ctx.textBaseline='top';
+  ctx.fillText(label,x,yc+hh/2+5);
+  ctx.restore();
+}
+
+// Positions canvas des filtres (en coordonnées canvas 0-980)
+const F1X=280, F2X=600, CW=980;
+
+function drawSchema(smlSrc,smlF1,smlFinal,f1,f2){
+  const canvas=document.getElementById('schema');
+  const ctx=canvas.getContext('2d');
+  const W=CW,H=300,cy=H/2-10;
+  ctx.clearRect(0,0,W,H);
+  const srcX=55,eyeX=840,fH=130;
+  const noSrc=smlSrc.every(v=>v===0);
+  const noF1=smlF1.every(v=>v===0);
+  const noFin=smlFinal.every(v=>v===0);
+
+  // SOURCE
+  drawSource(ctx,srcX,cy,noSrc?'#111':SOURCES[selSource].color);
+  ctx.fillStyle='#222';ctx.font='bold 15px Arial';ctx.textAlign='center';ctx.textBaseline='top';
+  ctx.fillText('SOURCE',srcX,cy+36);
+
+  // Rayon src → F1
+  if(!noSrc){
+    ctx.strokeStyle='#222';ctx.lineWidth=5;
+    ctx.beginPath();ctx.moveTo(srcX+36,cy);ctx.lineTo(F1X-16,cy);ctx.stroke();
+    midArrow(ctx,srcX+36,cy,F1X-16,cy);
+    ctx.fillStyle='#222';ctx.font='bold 16px Arial';ctx.textAlign='center';ctx.textBaseline='bottom';
+    ctx.fillText(smlLabel(smlSrc),(srcX+36+F1X-16)/2,cy-12);
+  }
+
+  // Filtre 1 + annotation
+  drawFilter(ctx,F1X,cy,FILTERS[f1].color,FILTERS[f1].label,fH);
+  const absF1=FILTERS[f1].trans.map((v,i)=>v===0?['S','M','L'][i]:null).filter(Boolean);
+  if(absF1.length){
+    ctx.fillStyle='#c00';ctx.font='bold 12px Arial';ctx.textAlign='center';ctx.textBaseline='bottom';
+    ctx.fillText('absorbe: '+absF1.join(','),F1X,cy-fH/2-6);
+  }
+
+  // Rayon F1 → F2
+  if(!noSrc){
+    if(!noF1){
+      ctx.strokeStyle='#222';ctx.lineWidth=5;
+      ctx.beginPath();ctx.moveTo(F1X+16,cy);ctx.lineTo(F2X-16,cy);ctx.stroke();
+      midArrow(ctx,F1X+16,cy,F2X-16,cy);
+      ctx.fillStyle='#222';ctx.font='bold 16px Arial';ctx.textAlign='center';ctx.textBaseline='bottom';
+      ctx.fillText(smlLabel(smlF1),(F1X+16+F2X-16)/2,cy-12);
+    } else {
+      ctx.strokeStyle='#aaa';ctx.lineWidth=2;ctx.setLineDash([6,5]);
+      ctx.beginPath();ctx.moveTo(F1X+16,cy);ctx.lineTo(F2X-16,cy);ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle='#c00';ctx.font='bold 20px Arial';ctx.textAlign='center';ctx.textBaseline='bottom';
+      ctx.fillText('∅',(F1X+16+F2X-16)/2,cy-12);
+    }
+  }
+
+  // Filtre 2 + annotation
+  drawFilter(ctx,F2X,cy,FILTERS[f2].color,FILTERS[f2].label,fH);
+  const absF2=FILTERS[f2].trans.map((v,i)=>v===0?['S','M','L'][i]:null).filter(Boolean);
+  if(absF2.length){
+    ctx.fillStyle='#c00';ctx.font='bold 12px Arial';ctx.textAlign='center';ctx.textBaseline='bottom';
+    ctx.fillText('absorbe: '+absF2.join(','),F2X,cy-fH/2-6);
+  }
+
+  // Rayon F2 → œil
+  if(!noSrc){
+    if(!noFin){
+      ctx.strokeStyle='#222';ctx.lineWidth=5;
+      ctx.beginPath();ctx.moveTo(F2X+16,cy);ctx.lineTo(eyeX-62,cy);ctx.stroke();
+      midArrow(ctx,F2X+16,cy,eyeX-62,cy);
+      ctx.fillStyle='#222';ctx.font='bold 16px Arial';ctx.textAlign='center';ctx.textBaseline='bottom';
+      ctx.fillText(smlLabel(smlFinal),(F2X+16+eyeX-62)/2,cy-12);
+    } else {
+      ctx.strokeStyle='#aaa';ctx.lineWidth=2;ctx.setLineDash([6,5]);
+      ctx.beginPath();ctx.moveTo(F2X+16,cy);ctx.lineTo(eyeX-62,cy);ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle='#c00';ctx.font='bold 20px Arial';ctx.textAlign='center';ctx.textBaseline='bottom';
+      ctx.fillText('∅',(F2X+16+eyeX-62)/2,cy-12);
+    }
+  }
+
+  // Œil
+  drawEye(ctx,eyeX,cy);
+  ctx.fillStyle='#222';ctx.font='bold 15px Arial';ctx.textAlign='center';ctx.textBaseline='top';
+  ctx.fillText('ŒIL',eyeX,cy+58);
+
+  // Flèche cerveau
+  ctx.strokeStyle='#333';ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(eyeX+58,cy);ctx.lineTo(eyeX+88,cy);ctx.stroke();
+  drawArrow(ctx,eyeX+58,cy,eyeX+92,cy);
+
+  // Positionner les cônes HTML sous F1 et F2
+  positionCones(canvas);
+}
+
+function positionCones(canvas){
+  const cw=canvas.offsetWidth||CW;
+  const scale=cw/CW;
+  const g1=document.getElementById('cones-f1-group');
+  const g2=document.getElementById('cones-f2-group');
+  g1.style.left=(F1X*scale)+'px';
+  g2.style.left=(F2X*scale)+'px';
+}
+
+function render(){
+  const src=SOURCES[selSource];
+  const f1=FILTERS[selF1],f2=FILTERS[selF2];
+  const smlF1=src.sml.map((v,i)=>v*f1.trans[i]);
+  const smlFin=smlF1.map((v,i)=>v*f2.trans[i]);
+
+  buildSources();
+  buildFilters('filts-1',selF1,i=>{selF1=i;render();});
+  buildFilters('filts-2',selF2,i=>{selF2=i;render();});
+  renderSML('sml-source',src.sml);
+  renderSML('sml-f1',smlF1);
+  renderSML('sml-oeil',smlFin);
+  // Les ronds montrent ce que le filtre absorbe (trans=0 → croix)
+  renderCones('cones-f1',f1.trans);
+  renderCones('cones-f2',f2.trans);
+  drawSchema(src.sml,smlF1,smlFin,selF1,selF2);
+  document.getElementById('cerveau-box').style.background=smlToRGB(smlFin);
+  document.getElementById('desc-f1').textContent='Filtre 1 : '+f1.desc;
+  document.getElementById('desc-f2').textContent='Filtre 2 : '+f2.desc;
+}
+
+render();
+window.addEventListener('resize',()=>{render();});
+</script>
+</body>
+</html>

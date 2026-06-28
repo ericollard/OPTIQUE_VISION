@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vision des couleurs — Ressources pédagogiques</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:#f4f4f4;color:#222;min-height:100vh}
+
+/* HEADER */
+header{background:#006D82;color:#fff;padding:32px 40px 24px}
+header h1{font-size:26px;font-weight:bold;letter-spacing:.5px;margin-bottom:6px}
+header p{font-size:14px;opacity:.85;max-width:680px;line-height:1.5}
+.badge{display:inline-block;background:#0099A2;color:#fff;font-size:11px;padding:3px 10px;border-radius:12px;margin-top:10px;letter-spacing:.3px}
+
+/* INTRO */
+.intro{max-width:860px;margin:32px auto 0;padding:0 24px}
+.intro p{font-size:14px;line-height:1.7;color:#444}
+
+/* GRILLE */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;max-width:860px;margin:28px auto 40px;padding:0 24px}
+
+/* CARTE */
+.card{background:#fff;border-radius:8px;border:1px solid #ddd;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 2px 6px rgba(0,0,0,.07);transition:box-shadow .2s}
+.card:hover{box-shadow:0 4px 14px rgba(0,0,0,.13)}
+.card-band{height:8px}
+.card-body{padding:18px 18px 12px;flex:1}
+.card-icon{font-size:28px;margin-bottom:8px}
+.card-title{font-size:16px;font-weight:bold;color:#006D82;margin-bottom:6px}
+.card-desc{font-size:13px;color:#555;line-height:1.5}
+.card-footer{padding:12px 18px;border-top:1px solid #eee}
+.btn{display:inline-block;background:#006D82;color:#fff;text-decoration:none;font-size:13px;font-weight:bold;padding:8px 18px;border-radius:5px;transition:background .2s}
+.btn:hover{background:#0099A2}
+
+/* FOOTER */
+footer{text-align:center;font-size:11px;color:#999;padding:20px;border-top:1px solid #ddd;margin-top:10px}
+footer a{color:#006D82;text-decoration:none}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Vision des couleurs</h1>
+  <p>Simulations interactives pour comprendre la perception colorée : sources lumineuses, filtres, surfaces et synthèse additive. Ressources conçues pour la formation des enseignants en sciences et technologie.</p>
+  <span class="badge">Éric Collard</span>
+</header>
+
+<div class="intro">
+  <p>Ces trois applications mobilisent le <strong>modèle SML</strong> (cônes Courte, Moyenne et Longue longueur d'onde) pour explorer les mécanismes de la vision des couleurs. Elles s'inscrivent dans le cadre de l'enseignement des sciences physiques à l'école primaire et de la formation initiale et continue des professeurs des écoles.</p>
+</div>
+
+<div class="grid">
+
+  <div class="card">
+    <div class="card-band" style="background:#BE1622"></div>
+    <div class="card-body">
+      <div class="card-icon">🔴🟢🔵</div>
+      <div class="card-title">Synthèse additive — RGB</div>
+      <div class="card-desc">Exploration de la synthèse additive par mélange de lumières colorées. Simulation du pilotage RGB et de la perception des mélanges par les cônes S, M, L.</div>
+    </div>
+    <div class="card-footer">
+      <a class="btn" href="RGB_PILOTE.HTML" target="_blank">Ouvrir</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-band" style="background:#006D82"></div>
+    <div class="card-body">
+      <div class="card-icon">🟫</div>
+      <div class="card-title">Diffusion sur une surface</div>
+      <div class="card-desc">Simulation de la diffusion de la lumière sur une surface colorée. Visualisation des radiations réfléchies et de la couleur perçue selon la source utilisée.</div>
+    </div>
+    <div class="card-footer">
+      <a class="btn" href="SURFACE.html" target="_blank">Ouvrir</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-band" style="background:#0099A2"></div>
+    <div class="card-body">
+      <div class="card-icon">🔷</div>
+      <div class="card-title">Transmission par un filtre</div>
+      <div class="card-desc">Simulation de la transmission de la lumière à travers un ou deux filtres colorés en cascade. Effet de chaque filtre sur le spectre SML et sur la couleur perçue.</div>
+    </div>
+    <div class="card-footer">
+      <a class="btn" href="FILTRE.html" target="_blank">Ouvrir</a>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  Éric Collard — Ressources pédagogiques libres — <a href="https://www.uca.fr" target="_blank">Université Clermont Auvergne</a>
+</footer>
+
+</body>
+</html>

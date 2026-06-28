@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Pilotage matrice DEL RGB</title>
+<style>
+  :root{
+    --uca:#006D82;
+    --uca2:#0099A2;
+    --sand:#C9A781;
+    --grey:#575756;
+    --red:#BE1622;
+    --bg:#10262b;
+    --panel:#173238;
+    --line:#2a4a51;
+    --txt:#eef5f6;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{
+    font-family:Calibri,"Segoe UI",system-ui,sans-serif;
+    background:var(--bg);
+    color:var(--txt);
+    -webkit-user-select:none;user-select:none;
+    overflow:hidden;
+  }
+  input{user-select:text;-webkit-user-select:text;}
+  .app{display:flex;flex-direction:column;height:100%;}
+  header{
+    background:var(--uca);
+    padding:10px 14px;
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  }
+  header h1{font-size:18px;margin:0;font-weight:600;}
+  .spacer{flex:1;}
+  .dot{width:12px;height:12px;border-radius:50%;background:var(--red);box-shadow:0 0 6px var(--red);}
+  .dot.on{background:#37d67a;box-shadow:0 0 8px #37d67a;}
+  .status{font-size:13px;opacity:.9;}
+  button{
+    font-family:inherit;font-size:14px;
+    border:none;border-radius:8px;padding:8px 12px;
+    background:var(--uca2);color:#fff;cursor:pointer;
+  }
+  button:active{transform:translateY(1px);}
+  button.ghost{background:transparent;border:1px solid rgba(255,255,255,.5);}
+  button.tool{background:var(--panel);border:2px solid var(--line);}
+  button.tool.active{border-color:var(--uca2);background:#1f4047;}
+  button.warn{background:var(--red);}
+  main{flex:1;display:flex;gap:16px;padding:16px;overflow:auto;}
+  .left{flex:1;min-width:300px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;}
+  .right{width:290px;display:flex;flex-direction:column;gap:14px;}
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(8,1fr);
+    grid-template-rows:repeat(5,1fr);
+    gap:8px;width:100%;max-width:560px;aspect-ratio:8/5;
+    background:#0a181b;border-radius:12px;padding:10px;
+    touch-action:none;
+  }
+  .cell{
+    border-radius:50%;background:#1c1c1c;border:1px solid #000;
+    transition:box-shadow .05s;
+  }
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;}
+  .panel h2{font-size:13px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.05em;color:var(--sand);font-weight:600;}
+  .pickwrap{display:flex;gap:10px;}
+  #sv{border-radius:8px;cursor:crosshair;flex:1;touch-action:none;}
+  #hue{border-radius:8px;cursor:pointer;width:26px;touch-action:none;}
+  .swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px;}
+  .sw{height:30px;border-radius:6px;border:2px solid rgba(255,255,255,.15);cursor:pointer;}
+  .currow{display:flex;align-items:center;gap:10px;margin-top:8px;font-size:13px;}
+  .curcolor{width:34px;height:34px;border-radius:8px;border:2px solid rgba(255,255,255,.3);}
+  .tools{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .row{display:flex;gap:8px;}
+  .row button{flex:1;}
+  label.slab{font-size:13px;display:block;margin-bottom:6px;}
+  input[type=range]{width:100%;}
+  input.txt{flex:1;background:#0f2429;border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:8px;font-family:inherit;font-size:14px;min-width:0;}
+  .presets{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+  .presets button{font-size:13px;padding:8px 6px;}
+  .note{font-size:12px;opacity:.7;line-height:1.4;margin:8px 0 0;}
+  .modebtns{display:flex;gap:6px;}
+  .modebtns button{flex:1;font-size:13px;padding:6px;}
+  .figlist{display:flex;flex-direction:column;gap:6px;margin-top:8px;max-height:200px;overflow:auto;}
+  .figrow{display:flex;align-items:center;gap:8px;background:#0f2429;border:1px solid var(--line);border-radius:8px;padding:6px;}
+  .figrow canvas{border-radius:4px;border:1px solid #000;background:#0a181b;}
+  .fname{flex:1;font-size:14px;cursor:pointer;text-align:left;background:transparent;border:none;color:var(--txt);padding:0;}
+  .figdel{background:transparent;border:1px solid rgba(255,255,255,.3);font-size:12px;padding:6px 8px;}
+  .figempty{font-size:13px;opacity:.6;margin-top:8px;}
+  @media (max-width:760px){
+    main{flex-direction:column;}
+    .right{width:100%;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Matrice DEL RGB</h1>
+    <span class="dot" id="dot"></span>
+    <span class="status" id="status">Non connecté</span>
+    <span class="spacer"></span>
+    <button id="connectBtn">Connecter</button>
+  </header>
+
+  <main>
+    <div class="left">
+      <div class="grid" id="grid"></div>
+      <div class="modebtns" style="max-width:560px;width:100%;">
+        <button class="tool active" id="modeLive" data-mode="live">Envoi continu</button>
+        <button class="tool" id="modeRelease" data-mode="release">Envoi au relâché</button>
+        <button id="sendBtn">Envoyer la trame</button>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="panel">
+        <h2>Couleur</h2>
+        <div class="pickwrap">
+          <canvas id="sv" width="200" height="150"></canvas>
+          <canvas id="hue" width="26" height="150"></canvas>
+        </div>
+        <div class="swatches" id="swatches"></div>
+        <div class="currow">
+          <div class="curcolor" id="curcolor"></div>
+          <span id="rgbtxt">rvb 255, 0, 0</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Outils</h2>
+        <div class="tools">
+          <button class="tool active" data-tool="brush">Pinceau</button>
+          <button class="tool" data-tool="eyedropper">Pipette</button>
+          <button class="tool" data-tool="eraser">Gomme</button>
+        </div>
+        <div class="row" style="margin-top:8px;">
+          <button class="ghost" id="fillBtn">Remplir tout</button>
+          <button class="warn" id="clearBtn">Effacer tout</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Figures enregistrées</h2>
+        <div class="row">
+          <input class="txt" id="figName" type="text" placeholder="Nom de la figure" maxlength="40">
+          <button id="saveFig" style="flex:0 0 auto;">Enregistrer</button>
+        </div>
+        <div class="figlist" id="figList"></div>
+        <p class="note">Préparez vos démonstrations à l'avance, rappelez les d'un seul appui en cours.</p>
+      </div>
+
+      <div class="panel">
+        <h2>Luminosité matérielle</h2>
+        <label class="slab"><span id="brightVal">40</span> sur 255</label>
+        <input type="range" id="bright" min="0" max="255" value="40">
+        <p class="note">Restez bas pour le confort visuel et pour limiter le courant sur l'alimentation USB.</p>
+      </div>
+
+      <div class="panel">
+        <h2>Démonstrations optique</h2>
+        <div class="presets">
+          <button data-preset="red">Tout rouge</button>
+          <button data-preset="green">Tout vert</button>
+          <button data-preset="blue">Tout bleu</button>
+          <button data-preset="white">Tout blanc</button>
+          <button data-preset="bands">Bandes R V B</button>
+          <button data-preset="off">Éteindre</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Orientation</h2>
+        <div class="row">
+          <button class="ghost" id="flipH">Miroir horizontal</button>
+          <button class="ghost" id="flipV">Miroir vertical</button>
+        </div>
+        <p class="note">À ajuster pour que le dessin à l'écran corresponde au sens réel du shield au mur.</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  // ---- Constantes ----
+  const COLS = 8, ROWS = 5, COUNT = COLS * ROWS;
+  const SERVICE_UUID = "19b10000-e8f2-537e-4f6c-d104768a1214";
+  const RX_UUID = "19b10001-e8f2-537e-4f6c-d104768a1214";
+
+  // ---- État ----
+  const state = {
+    grid: Array.from({length: COUNT}, () => ({r:0,g:0,b:0})),
+    color: {r:255,g:0,b:0},
+    hue: 0, sat: 1, val: 1,
+    tool: "brush",
+    mode: "live",
+    flipH: false, flipV: false,
+    bright: 40,
+    painting: false,
+    lastPainted: -1
+  };
+
+  // ---- BLE ----
+  let device = null, server = null, rxChar = null;
+  const dot = document.getElementById("dot");
+  const statusEl = document.getElementById("status");
+  const connectBtn = document.getElementById("connectBtn");
+
+  function setStatus(txt, on){
+    statusEl.textContent = txt;
+    dot.classList.toggle("on", !!on);
+  }
+
+  connectBtn.addEventListener("click", async () => {
+    if(server && server.connected){ disconnect(); return; }
+    if(!navigator.bluetooth){
+      setStatus("Bluetooth indisponible dans ce navigateur");
+      alert("Web Bluetooth n'est pas disponible ici. Sur MacBook, ouvrez ce fichier dans Chrome. Sur iPad, utilisez le navigateur Bluefy.");
+      return;
+    }
+    try{
+      setStatus("Recherche...");
+      device = await navigator.bluetooth.requestDevice({
+        filters: [{ services: [SERVICE_UUID] }],
+        optionalServices: [SERVICE_UUID]
+      });
+      device.addEventListener("gattserverdisconnected", () => setStatus("Déconnecté"));
+      server = await device.gatt.connect();
+      const svc = await server.getPrimaryService(SERVICE_UUID);
+      rxChar = await svc.getCharacteristic(RX_UUID);
+      setStatus("Connecté à " + (device.name || "module"), true);
+      connectBtn.textContent = "Déconnecter";
+      await sendBrightness(state.bright);
+      await sendFrame();
+    }catch(err){
+      console.error(err);
+      setStatus("Connexion annulée ou échouée");
+    }
+  });
+
+  function disconnect(){
+    if(device && device.gatt.connected) device.gatt.disconnect();
+    setStatus("Déconnecté");
+    connectBtn.textContent = "Connecter";
+  }
+
+  function isConnected(){
+    return !!(device && device.gatt && device.gatt.connected && rxChar);
+  }
+  function onDropped(){
+    rxChar = null;
+    setStatus("Connexion perdue, reconnectez");
+    connectBtn.textContent = "Connecter";
+  }
+  let gattChain = Promise.resolve();
+  function lock(task){
+    const next = gattChain.then(task, task);
+    gattChain = next.then(()=>{}, ()=>{});
+    return next;
+  }
+  async function write(bytes, withResponse){
+    if(!isConnected()) return false;
+    return lock(async ()=>{
+      if(!isConnected()) return false;
+      try{
+        const data = new Uint8Array(bytes);
+        if(withResponse) await rxChar.writeValueWithResponse(data);
+        else await rxChar.writeValueWithoutResponse(data);
+        return true;
+      }catch(e){
+        if(!(device && device.gatt && device.gatt.connected)){ onDropped(); }
+        else { console.warn("écriture échouée", e); }
+        return false;
+      }
+    });
+  }
+
+  function physIndex(idx){
+    let r = Math.floor(idx / COLS), c = idx % COLS;
+    if(state.flipV) r = ROWS - 1 - r;
+    if(state.flipH) c = COLS - 1 - c;
+    return r * COLS + c;
+  }
+
+  async function sendPixelLive(idx){
+    const p = state.grid[idx];
+    await write([0x06, physIndex(idx), p.r, p.g, p.b]);
+  }
+
+  async function sendFrame(){
+    if(!isConnected()) return;
+    for(let i=0;i<COUNT;i++){
+      const p = state.grid[i];
+      const ok = await write([0x01, physIndex(i), p.r, p.g, p.b], true);
+      if(!ok) return;
+    }
+    await write([0x02], true);
+  }
+
+  async function sendFill(c){ await write([0x03, c.r, c.g, c.b], true); }
+  async function sendClear(){ await write([0x04], true); }
+  async function sendBrightness(v){ await write([0x05, v], true); }
+
+  // ---- Grille ----
+  const grid = document.getElementById("grid");
+  const cells = [];
+  for(let i=0;i<COUNT;i++){
+    const d = document.createElement("div");
+    d.className = "cell";
+    d.dataset.index = i;
+    grid.appendChild(d);
+    cells.push(d);
+  }
+  function renderCell(i){
+    const p = state.grid[i];
+    const lit = p.r||p.g||p.b;
+    const col = `rgb(${p.r},${p.g},${p.b})`;
+    cells[i].style.background = lit ? col : "#1c1c1c";
+    cells[i].style.boxShadow = lit ? `0 0 12px ${col}` : "none";
+  }
+  function renderAll(){ for(let i=0;i<COUNT;i++) renderCell(i); }
+
+  function applyToCell(i){
+    if(state.tool === "eyedropper"){
+      const p = state.grid[i];
+      if(p.r||p.g||p.b){ setColor(p.r,p.g,p.b); }
+      return;
+    }
+    const c = state.tool === "eraser" ? {r:0,g:0,b:0} : {...state.color};
+    state.grid[i] = c;
+    renderCell(i);
+    if(state.mode === "live" && rxChar) sendPixelLive(i);
+  }
+
+  function cellFromPoint(x,y){
+    const el = document.elementFromPoint(x,y);
+    if(el && el.classList.contains("cell")) return parseInt(el.dataset.index,10);
+    return -1;
+  }
+
+  grid.addEventListener("pointerdown", e=>{
+    e.preventDefault();
+    state.painting = true;
+    state.lastPainted = -1;
+    grid.setPointerCapture(e.pointerId);
+    const i = cellFromPoint(e.clientX, e.clientY);
+    if(i>=0){ applyToCell(i); state.lastPainted = i; }
+  });
+  grid.addEventListener("pointermove", e=>{
+    if(!state.painting) return;
+    const i = cellFromPoint(e.clientX, e.clientY);
+    if(i>=0 && i!==state.lastPainted){ applyToCell(i); state.lastPainted = i; }
+  });
+  window.addEventListener("pointerup", ()=>{
+    if(state.painting){
+      state.painting = false;
+      if(state.mode === "release" && rxChar) sendFrame();
+    }
+  });
+
+  // ---- Sélecteur de couleur ----
+  const sv = document.getElementById("sv");
+  const hue = document.getElementById("hue");
+  const svCtx = sv.getContext("2d");
+  const hueCtx = hue.getContext("2d");
+
+  function hsvToRgb(h,s,v){
+    const c = v*s, x = c*(1-Math.abs((h/60)%2-1)), m = v-c;
+    let r=0,g=0,b=0;
+    if(h<60){r=c;g=x;} else if(h<120){r=x;g=c;}
+    else if(h<180){g=c;b=x;} else if(h<240){g=x;b=c;}
+    else if(h<300){r=x;b=c;} else {r=c;b=x;}
+    return {r:Math.round((r+m)*255),g:Math.round((g+m)*255),b:Math.round((b+m)*255)};
+  }
+
+  function drawHue(){
+    const g = hueCtx.createLinearGradient(0,0,0,hue.height);
+    for(let i=0;i<=6;i++){ g.addColorStop(i/6, `hsl(${i*60},100%,50%)`); }
+    hueCtx.fillStyle = g;
+    hueCtx.fillRect(0,0,hue.width,hue.height);
+    const y = (state.hue/360)*hue.height;
+    hueCtx.strokeStyle = "#fff"; hueCtx.lineWidth = 2;
+    hueCtx.strokeRect(0, y-2, hue.width, 4);
+  }
+  function drawSV(){
+    svCtx.fillStyle = `hsl(${state.hue},100%,50%)`;
+    svCtx.fillRect(0,0,sv.width,sv.height);
+    let gx = svCtx.createLinearGradient(0,0,sv.width,0);
+    gx.addColorStop(0,"rgba(255,255,255,1)");
+    gx.addColorStop(1,"rgba(255,255,255,0)");
+    svCtx.fillStyle = gx; svCtx.fillRect(0,0,sv.width,sv.height);
+    let gy = svCtx.createLinearGradient(0,0,0,sv.height);
+    gy.addColorStop(0,"rgba(0,0,0,0)");
+    gy.addColorStop(1,"rgba(0,0,0,1)");
+    svCtx.fillStyle = gy; svCtx.fillRect(0,0,sv.width,sv.height);
+    const x = state.sat*sv.width, y = (1-state.val)*sv.height;
+    svCtx.strokeStyle = "#fff"; svCtx.lineWidth = 2;
+    svCtx.beginPath(); svCtx.arc(x,y,6,0,Math.PI*2); svCtx.stroke();
+    svCtx.strokeStyle = "#000"; svCtx.lineWidth = 1;
+    svCtx.beginPath(); svCtx.arc(x,y,7,0,Math.PI*2); svCtx.stroke();
+  }
+
+  function updateColorFromHSV(){
+    state.color = hsvToRgb(state.hue, state.sat, state.val);
+    refreshColorUI();
+  }
+  function refreshColorUI(){
+    const c = state.color;
+    document.getElementById("curcolor").style.background = `rgb(${c.r},${c.g},${c.b})`;
+    document.getElementById("rgbtxt").textContent = `rvb ${c.r}, ${c.g}, ${c.b}`;
+    drawSV(); drawHue();
+  }
+  function setColor(r,g,b){
+    state.color = {r,g,b};
+    const mx=Math.max(r,g,b), mn=Math.min(r,g,b), d=mx-mn;
+    let h=0;
+    if(d){
+      if(mx===r) h=60*(((g-b)/d)%6);
+      else if(mx===g) h=60*((b-r)/d+2);
+      else h=60*((r-g)/d+4);
+    }
+    if(h<0) h+=360;
+    state.hue=h; state.sat = mx? d/mx : 0; state.val = mx/255;
+    refreshColorUI();
+  }
+
+  function svPick(e){
+    const rect = sv.getBoundingClientRect();
+    let x = (e.clientX-rect.left)/rect.width;
+    let y = (e.clientY-rect.top)/rect.height;
+    x = Math.min(1,Math.max(0,x)); y = Math.min(1,Math.max(0,y));
+    state.sat = x; state.val = 1-y;
+    updateColorFromHSV();
+  }
+  function huePick(e){
+    const rect = hue.getBoundingClientRect();
+    let y = (e.clientY-rect.top)/rect.height;
+    y = Math.min(1,Math.max(0,y));
+    state.hue = y*360;
+    updateColorFromHSV();
+  }
+  let svDown=false, hueDown=false;
+  sv.addEventListener("pointerdown", e=>{svDown=true; sv.setPointerCapture(e.pointerId); svPick(e);});
+  sv.addEventListener("pointermove", e=>{ if(svDown) svPick(e); });
+  sv.addEventListener("pointerup", ()=>svDown=false);
+  hue.addEventListener("pointerdown", e=>{hueDown=true; hue.setPointerCapture(e.pointerId); huePick(e);});
+  hue.addEventListener("pointermove", e=>{ if(hueDown) huePick(e); });
+  hue.addEventListener("pointerup", ()=>hueDown=false);
+
+  // ---- Nuancier rapide ----
+  const swatchColors = [
+    [255,0,0],[0,255,0],[0,0,255],[255,255,255],
+    [0,255,255],[255,0,255],[255,255,0],[0,0,0]
+  ];
+  const swWrap = document.getElementById("swatches");
+  swatchColors.forEach(c=>{
+    const d = document.createElement("div");
+    d.className = "sw";
+    d.style.background = `rgb(${c[0]},${c[1]},${c[2]})`;
+    d.addEventListener("click", ()=>setColor(c[0],c[1],c[2]));
+    swWrap.appendChild(d);
+  });
+
+  // ---- Outils ----
+  document.querySelectorAll("[data-tool]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      state.tool = b.dataset.tool;
+      document.querySelectorAll("[data-tool]").forEach(x=>x.classList.remove("active"));
+      b.classList.add("active");
+    });
+  });
+
+  // ---- Mode envoi ----
+  function setMode(m){
+    state.mode = m;
+    document.getElementById("modeLive").classList.toggle("active", m==="live");
+    document.getElementById("modeRelease").classList.toggle("active", m==="release");
+  }
+  document.getElementById("modeLive").addEventListener("click", ()=>setMode("live"));
+  document.getElementById("modeRelease").addEventListener("click", ()=>setMode("release"));
+  document.getElementById("sendBtn").addEventListener("click", ()=>sendFrame());
+
+  // ---- Remplir / effacer ----
+  document.getElementById("fillBtn").addEventListener("click", ()=>{
+    state.grid = state.grid.map(()=>({...state.color}));
+    renderAll();
+    if(rxChar) sendFill(state.color);
+  });
+  document.getElementById("clearBtn").addEventListener("click", ()=>{
+    state.grid = state.grid.map(()=>({r:0,g:0,b:0}));
+    renderAll();
+    if(rxChar) sendClear();
+  });
+
+  // ---- Luminosité ----
+  const brightInput = document.getElementById("bright");
+  const brightVal = document.getElementById("brightVal");
+  let brightTimer = null;
+  brightInput.addEventListener("input", ()=>{
+    state.bright = parseInt(brightInput.value,10);
+    brightVal.textContent = state.bright;
+    clearTimeout(brightTimer);
+    brightTimer = setTimeout(()=>{ if(rxChar) sendBrightness(state.bright); }, 60);
+  });
+
+  // ---- Orientation ----
+  document.getElementById("flipH").addEventListener("click", function(){
+    state.flipH = !state.flipH; this.classList.toggle("active", state.flipH);
+    if(rxChar) sendFrame();
+  });
+  document.getElementById("flipV").addEventListener("click", function(){
+    state.flipV = !state.flipV; this.classList.toggle("active", state.flipV);
+    if(rxChar) sendFrame();
+  });
+
+  // ---- Préréglages optique ----
+  function setPreset(name){
+    const g = state.grid;
+    if(name==="off"){ for(let i=0;i<COUNT;i++) g[i]={r:0,g:0,b:0}; }
+    else if(name==="white"){ for(let i=0;i<COUNT;i++) g[i]={r:255,g:255,b:255}; }
+    else if(name==="red"){ for(let i=0;i<COUNT;i++) g[i]={r:255,g:0,b:0}; }
+    else if(name==="green"){ for(let i=0;i<COUNT;i++) g[i]={r:0,g:255,b:0}; }
+    else if(name==="blue"){ for(let i=0;i<COUNT;i++) g[i]={r:0,g:0,b:255}; }
+    else if(name==="bands"){
+      for(let i=0;i<COUNT;i++){
+        const c = i % COLS;
+        if(c<3) g[i]={r:255,g:0,b:0};
+        else if(c<5) g[i]={r:0,g:255,b:0};
+        else g[i]={r:0,g:0,b:255};
+      }
+    }
+    renderAll();
+    if(rxChar) sendFrame();
+  }
+  document.querySelectorAll("[data-preset]").forEach(b=>{
+    b.addEventListener("click", ()=>setPreset(b.dataset.preset));
+  });
+
+  // ---- Figures enregistrées ----
+  let figures = {}; // nom -> tableau de 40 {r,g,b}
+  const figList = document.getElementById("figList");
+  const figName = document.getElementById("figName");
+  const hasStore = !!(window.storage && window.storage.get);
+
+  async function loadFigures(){
+    if(!hasStore){ renderFigList(); return; }
+    try{
+      const res = await window.storage.get("figures", false);
+      if(res && res.value) figures = JSON.parse(res.value);
+    }catch(e){ figures = {}; }
+    renderFigList();
+  }
+  async function persistFigures(){
+    if(!hasStore) return;
+    try{ await window.storage.set("figures", JSON.stringify(figures), false); }
+    catch(e){ console.warn("sauvegarde échouée", e); }
+  }
+  function makeThumb(arr){
+    const cv = document.createElement("canvas");
+    const ps = 6;
+    cv.width = COLS*ps; cv.height = ROWS*ps;
+    const c = cv.getContext("2d");
+    c.fillStyle = "#0a181b"; c.fillRect(0,0,cv.width,cv.height);
+    arr.forEach((p,i)=>{
+      if(p.r||p.g||p.b){
+        c.fillStyle = `rgb(${p.r},${p.g},${p.b})`;
+        c.fillRect((i%COLS)*ps,(Math.floor(i/COLS))*ps,ps,ps);
+      }
+    });
+    return cv;
+  }
+  function renderFigList(){
+    figList.innerHTML = "";
+    const names = Object.keys(figures);
+    if(names.length === 0){
+      const p = document.createElement("p");
+      p.className = "figempty";
+      p.textContent = "Aucune figure enregistrée pour le moment.";
+      figList.appendChild(p);
+      return;
+    }
+    names.forEach(name=>{
+      const row = document.createElement("div");
+      row.className = "figrow";
+      row.appendChild(makeThumb(figures[name]));
+      const btn = document.createElement("button");
+      btn.className = "fname";
+      btn.textContent = name;
+      btn.addEventListener("click", ()=>recallFigure(name));
+      row.appendChild(btn);
+      const del = document.createElement("button");
+      del.className = "figdel";
+      del.textContent = "Suppr";
+      del.addEventListener("click", ()=>deleteFigure(name));
+      row.appendChild(del);
+      figList.appendChild(row);
+    });
+  }
+  function recallFigure(name){
+    const f = figures[name];
+    if(!f) return;
+    state.grid = f.map(p=>({r:p.r,g:p.g,b:p.b}));
+    renderAll();
+    if(rxChar) sendFrame();
+  }
+  async function deleteFigure(name){
+    if(!window.confirm("Supprimer la figure " + name + " ?")) return;
+    delete figures[name];
+    await persistFigures();
+    renderFigList();
+  }
+  document.getElementById("saveFig").addEventListener("click", async ()=>{
+    const name = figName.value.trim();
+    if(!name){ alert("Donnez un nom à la figure."); return; }
+    if(figures[name] && !window.confirm("Une figure porte déjà ce nom. La remplacer ?")) return;
+    figures[name] = state.grid.map(p=>({r:p.r,g:p.g,b:p.b}));
+    await persistFigures();
+    figName.value = "";
+    renderFigList();
+  });
+  figName.addEventListener("keydown", e=>{ if(e.key === "Enter") document.getElementById("saveFig").click(); });
+
+  // ---- Init ----
+  refreshColorUI();
+  renderAll();
+  loadFigures();
+  if(!navigator.bluetooth){
+    setStatus("Web Bluetooth indisponible ici");
+  }
+</script>
+</body>
+</html>
